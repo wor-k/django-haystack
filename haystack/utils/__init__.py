@@ -30,6 +30,8 @@ def default_get_identifier(obj_or_string):
     return u"%s.%s" % (get_model_ct(obj_or_string),
                        'id')
 
+def mongo_get_identifier(obj_or_string):
+    return obj_or_string.id
 
 def _lookup_identifier_method():
     """
@@ -64,8 +66,7 @@ get_identifier = _lookup_identifier_method()
 
 
 def get_model_ct_tuple(model):
-    #return (model._meta.app_label, model._meta.model_name)
-    return ('products', 'Product')
+    return (model.__module__.split('.')[0], model._class_name)
 
 def get_model_ct(model):
     return "%s.%s" % get_model_ct_tuple(model)
