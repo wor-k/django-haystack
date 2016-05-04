@@ -213,15 +213,10 @@ class Command(BaseCommand):
                     raise
 
     def update_backend(self, label, using):
-        print(label)
         backend = haystack_connections[using].get_backend()
         unified_index = haystack_connections[using].get_unified_index()
 
-        if label != 'products':
-            return
-
         for model in haystack_get_models(label):
-            print(model)
             try:
                 index = unified_index.get_index(model)
             except NotHandled:
