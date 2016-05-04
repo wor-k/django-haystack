@@ -18,17 +18,35 @@ def haystack_load_apps():
     """Return a list of app labels for all installed applications which have models"""
     return [i.label for i in apps.get_app_configs() if i.models_module is not None]
 
+# def haystack_get_models(label):
+#     try:
+#         app_mod = apps.get_app_config(label)
+#         return app_mod.get_models()
+#     except LookupError:
+#         if '.' not in label:
+#             raise ImproperlyConfigured('Unknown application label {}'.format(label))
+#         app_label, model_name = label.rsplit('.', 1)
+#         return [apps.get_model(app_label, model_name)]
+#     except ImproperlyConfigured:
+#         pass
+
 def haystack_get_models(label):
+    from mongoengine.base import BaseDocument
+    ans = []
     try:
-        app_mod = apps.get_app_config(label)
-        return app_mod.get_models()
-    except LookupError:
-        if '.' not in label:
-            raise ImproperlyConfigured('Unknown application label {}'.format(label))
-        app_label, model_name = label.rsplit('.', 1)
-        return [apps.get_model(app_label, model_name)]
-    except ImproperlyConfigured:
-        pass
+        module = __import__("%s.models" % label)
+        for m in dir(module.models):
+            try:
+                tmp = getattr(module.models, m)
+                if issubclass(tmp, BaseDocument):
+                    ans.append(tmp)
+            except:
+                pass
+        return ans
+    except:
+        return []
+
+
 
 def haystack_get_model(app_label, model_name):
     return apps.get_model(app_label, model_name)

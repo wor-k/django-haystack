@@ -28,7 +28,7 @@ def default_get_identifier(obj_or_string):
         return obj_or_string
 
     return u"%s.%s" % (get_model_ct(obj_or_string),
-                       obj_or_string._get_pk_val())
+                       'id')
 
 
 def _lookup_identifier_method():
@@ -64,7 +64,8 @@ get_identifier = _lookup_identifier_method()
 
 
 def get_model_ct_tuple(model):
-    return (model._meta.app_label, model._meta.model_name)
+    #return (model._meta.app_label, model._meta.model_name)
+    return ('products', 'Product')
 
 def get_model_ct(model):
     return "%s.%s" % get_model_ct_tuple(model)

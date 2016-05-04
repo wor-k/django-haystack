@@ -128,7 +128,7 @@ class SearchIndex(with_metaclass(DeclarativeMetaclass, threading.local)):
 
         Subclasses can override this method to avoid indexing certain objects.
         """
-        return self.get_model()._default_manager.all()
+        return self.get_model().objects.all()
 
     def read_queryset(self, using=None):
         """
@@ -181,7 +181,8 @@ class SearchIndex(with_metaclass(DeclarativeMetaclass, threading.local)):
 
         # `.select_related()` seems like a good idea here but can fail on
         # nullable `ForeignKey` as well as what seems like other cases.
-        return index_qs.filter(**extra_lookup_kwargs).order_by(model._meta.pk.name)
+        # return index_qs.filter(**extra_lookup_kwargs).order_by(model._meta.pk.name)
+        return index_qs.filter(**extra_lookup_kwargs)
 
     def prepare(self, obj):
         """
