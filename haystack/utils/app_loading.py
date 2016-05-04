@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 
+from mongoengine.base import BaseDocument
+
 __all__ = ['haystack_get_models', 'haystack_load_apps']
 
 APP = 'app'
@@ -31,7 +33,6 @@ def haystack_load_apps():
 #         pass
 
 def haystack_get_models(label):
-    from mongoengine.base import BaseDocument
     ans = []
     try:
         module = __import__("%s.models" % label)
@@ -49,4 +50,11 @@ def haystack_get_models(label):
 
 
 def haystack_get_model(app_label, model_name):
-    return apps.get_model(app_label, model_name)
+    module = __import__("%s.models" % app_label)
+    ans = getattr(module.models, model_name)
+    if issubclass(ans, BaseDocument):
+        return ans
+    else:
+        return
+
+    #return apps.get_model(app_label, model_name)

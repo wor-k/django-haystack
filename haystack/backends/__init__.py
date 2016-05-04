@@ -6,6 +6,7 @@ from time import time
 from django.conf import settings
 from django.db.models import Q
 from django.db.models.base import ModelBase
+from mongoengine.base.metaclasses import TopLevelDocumentMetaclass
 from django.utils import six
 from django.utils import tree
 from django.utils.encoding import force_text
@@ -808,8 +809,8 @@ class BaseSearchQuery(object):
         This builds upon previous additions, so you can limit to multiple models
         by chaining this method several times.
         """
-        if not isinstance(model, ModelBase):
-            raise AttributeError('The model being added to the query must derive from Model.')
+        if not isinstance(model, ModelBase) and not isinstance(model, TopLevelDocumentMetaclass):
+            raise AttributeError('The model being added to the query must derive from ModelBase or BaseDocument.')
 
         self.models.add(model)
 

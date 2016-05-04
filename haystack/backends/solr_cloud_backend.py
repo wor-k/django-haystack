@@ -10,11 +10,8 @@ except ImportError:
 from django.core.exceptions import ImproperlyConfigured
 
 from haystack.backends import BaseEngine
-from haystack.constants import DJANGO_CT, DJANGO_ID, ID
 from haystack.exceptions import MissingDependency
-from haystack.models import SearchResult
 from haystack.utils import log as logging
-from haystack.utils.app_loading import haystack_get_model
 from haystack.backends.solr_backend import SolrSearchBackend, SolrSearchQuery
 
 
@@ -51,91 +48,28 @@ class SolrCloudSearchBackend(SolrSearchBackend):
         return SolrCloud(self.zk, collection, timeout=timeout, **kwargs)
 
     def _process_results(self, raw_results, highlight=False, result_class=None, distance_point=None):
-        #TODO: !!!!!!!! to improve performance by query to DB as batch.
-        from haystack import connections
-        results = []
-        hits = raw_results.hits
-        facets = {}
-        stats = {}
-        spelling_suggestion = None
+        to_return = super(SolrCloudSearchBackend, self)._process_results(raw_results, highlight, result_class, distance_point)
+        to_return['results'] = self.pre_load_result_objects(to_return['results'])
+        return to_return
 
-        if result_class is None:
-            result_class = SearchResult
-
-        if hasattr(raw_results,'stats'):
-            stats = raw_results.stats.get('stats_fields',{})
-
-        if hasattr(raw_results, 'facets'):
-            facets = {
-                'fields': raw_results.facets.get('facet_fields', {}),
-                'dates': raw_results.facets.get('facet_dates', {}),
-                'queries': raw_results.facets.get('facet_queries', {}),
-            }
-
-            for key in ['fields']:
-                for facet_field in facets[key]:
-                    # Convert to a two-tuple, as Solr's json format returns a list of
-                    # pairs.
-                    facets[key][facet_field] = list(zip(facets[key][facet_field][::2], facets[key][facet_field][1::2]))
-
-        if self.include_spelling is True:
-            if hasattr(raw_results, 'spellcheck'):
-                if len(raw_results.spellcheck.get('suggestions', [])):
-                    # For some reason, it's an array of pairs. Pull off the
-                    # collated result from the end.
-                    spelling_suggestion = raw_results.spellcheck.get('suggestions')[-1]
-
-        unified_index = connections[self.connection_alias].get_unified_index()
-        indexed_models = unified_index.get_indexed_models()
-
-        for raw_result in raw_results.docs:
-            app_label, model_name = raw_result[DJANGO_CT].split('.')
-            additional_fields = {}
-            model = haystack_get_model(app_label, model_name)
-
-            if model and model in indexed_models:
-                index = unified_index.get_index(model)
-                index_field_map = index.field_map
-                for key, value in raw_result.items():
-                    string_key = str(key)
-                    # re-map key if alternate name used
-                    if string_key in index_field_map:
-                        string_key = index_field_map[key]
-
-                    if string_key in index.fields and hasattr(index.fields[string_key], 'convert'):
-                        additional_fields[string_key] = index.fields[string_key].convert(value)
-                    else:
-                        additional_fields[string_key] = self.conn._to_python(value)
-
-                del(additional_fields[DJANGO_CT])
-                del(additional_fields[DJANGO_ID])
-                del(additional_fields['score'])
-
-                if raw_result[ID] in getattr(raw_results, 'highlighting', {}):
-                    additional_fields['highlighted'] = raw_results.highlighting[raw_result[ID]]
-
-                if distance_point:
-                    additional_fields['_point_of_origin'] = distance_point
-
-                    if raw_result.get('__dist__'):
-                        from haystack.utils.geo import Distance
-                        additional_fields['_distance'] = Distance(km=float(raw_result['__dist__']))
-                    else:
-                        additional_fields['_distance'] = None
-
-                result = result_class(app_label, model_name, raw_result[DJANGO_ID], raw_result['score'], **additional_fields)
-                results.append(result)
+    def pre_load_result_objects(self, results):
+        pks = []
+        model = None
+        for result in results:
+            pks.append(result.pk)
+            if not model:
+                model = result.model
             else:
-                hits -= 1
+                if model is not result.model:
+                    self.log.warning("Not support multiple type of models")
+                    return
 
-        return {
-            'results': results,
-            'hits': hits,
-            'stats': stats,
-            'facets': facets,
-            'spelling_suggestion': spelling_suggestion,
-        }
-
+        searchindex = results[0].searchindex
+        query_result = searchindex.read_queryset().filter(pk__in=pks)
+        query_result_id_dict = dict((str(o.pk), o) for o in query_result)
+        for result in results:
+            obj = query_result_id_dict[result.pk]
+            result._set_object(obj)
 
 
 class ZooKeeperCustomCollection(ZooKeeper):

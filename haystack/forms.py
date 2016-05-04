@@ -15,7 +15,7 @@ from haystack.utils.app_loading import haystack_get_model
 
 
 def model_choices(using=DEFAULT_ALIAS):
-    choices = [(get_model_ct(m), capfirst(smart_text(m._meta.verbose_name_plural)))
+    choices = [(get_model_ct(m), capfirst(smart_text(m._class_name)))
                for m in connections[using].get_unified_index().get_indexed_models()]
     return sorted(choices, key=lambda x: x[1])
 
