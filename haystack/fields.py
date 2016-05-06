@@ -447,3 +447,33 @@ class FacetDateTimeField(FacetField, DateTimeField):
 
 class FacetMultiValueField(FacetField, MultiValueField):
     pass
+
+
+class DictTextField(SearchField):
+    field_type = 'text_en'
+
+    def get(self, obj):
+        attrs = self.model_attr.split('.')
+        if len(attrs) < 2 or len(attrs) > 2:
+            raise SearchFieldError("This field requires xxx.yyy format")
+
+        current_object = obj
+
+        if not hasattr(current_object, attrs[0]):
+            raise SearchFieldError("The model '%s' does not have a model_attr '%s'." % (repr(current_object), attrs[0]))
+
+        current_object = getattr(current_object, attrs[0], None)
+
+        if current_object:
+            return current_object.get(attrs[1], None)
+
+        return None
+
+    def prepare(self, obj):
+        return self.convert(self.get(obj))
+
+    def convert(self, value):
+        if value is None:
+            return None
+
+        return six.text_type(value)
