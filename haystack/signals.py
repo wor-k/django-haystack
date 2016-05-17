@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from django.db import models
+from mongoengine import signals
 
 from haystack.exceptions import NotHandled
 
@@ -86,5 +87,28 @@ class RealtimeSignalProcessor(BaseSignalProcessor):
         # Naive (listen to all model saves).
         models.signals.post_save.disconnect(self.handle_save)
         models.signals.post_delete.disconnect(self.handle_delete)
+        # Efficient would be going through all backends & collecting all models
+        # being used, then disconnecting signals only for those.
+
+
+class RealtimeMongoSignalProcessor(BaseSignalProcessor):
+
+    def handle_save(self, sender, document, **kwargs):
+        super(RealtimeMongoSignalProcessor, self).handle_save(sender, document, **kwargs)
+
+    def handle_delete(self, sender, document, **kwargs):
+        super(RealtimeMongoSignalProcessor, self).handle_delete(sender, document, **kwargs)
+
+    def setup(self):
+        # Naive (listen to all model saves).
+        signals.post_save.connect(self.handle_save)
+        signals.post_delete.connect(self.handle_delete)
+        # Efficient would be going through all backends & collecting all models
+        # being used, then hooking up signals only for those.
+
+    def teardown(self):
+        # Naive (listen to all model saves).
+        signals.post_save.disconnect(self.handle_save)
+        signals.post_delete.disconnect(self.handle_delete)
         # Efficient would be going through all backends & collecting all models
         # being used, then disconnecting signals only for those.
