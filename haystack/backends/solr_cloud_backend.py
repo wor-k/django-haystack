@@ -47,29 +47,28 @@ class SolrCloudSearchBackend(SolrSearchBackend):
             self.zk = ZooKeeperCustomCollection(zookeeper_url)
         return SolrCloud(self.zk, collection, timeout=timeout, **kwargs)
 
-    def _process_results(self, raw_results, highlight=False, result_class=None, distance_point=None):
-        to_return = super(SolrCloudSearchBackend, self)._process_results(raw_results, highlight, result_class, distance_point)
-        to_return['results'] = self.pre_load_result_objects(to_return['results'])
-        return to_return
+#    def _process_results(self, raw_results, highlight=False, result_class=None, distance_point=None):
+#        to_return = super(SolrCloudSearchBackend, self)._process_results(raw_results, highlight, result_class, distance_point)
+#        to_return['results'] = self.pre_load_result_objects(to_return['results'])
+#        return to_return
 
-    def pre_load_result_objects(self, results):
-        pks = []
-        model = None
-        for result in results:
-            pks.append(result.pk)
-            if not model:
-                model = result.model
-            else:
-                if model is not result.model:
-                    self.log.warning("Not support multiple type of models")
-                    return
-
-        searchindex = results[0].searchindex
-        query_result = searchindex.read_queryset().filter(pk__in=pks)
-        query_result_id_dict = dict((str(o.pk), o) for o in query_result)
-        for result in results:
-            obj = query_result_id_dict[result.pk]
-            result._set_object(obj)
+#    def pre_load_result_objects(self, results):
+#        pks = []
+#        model = None
+#        for result in results:
+#            pks.append(result.pk)
+#            if not model:
+#                model = result.model
+#            else:
+#                if model is not result.model:
+#                    self.log.warning("Not support multiple type of models")
+#                    return
+#        searchindex = results[0].searchindex
+#        query_result = searchindex.read_queryset().filter(pk__in=pks)
+#        query_result_id_dict = dict((str(o.pk), o) for o in query_result)
+#        for result in results:
+#            obj = query_result_id_dict[result.pk]
+#            result._set_object(obj)
 
 
 class ZooKeeperCustomCollection(ZooKeeper):
