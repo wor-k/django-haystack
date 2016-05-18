@@ -13,7 +13,7 @@ from haystack.constants import DEFAULT_OPERATOR, ITERATOR_LOAD_PER_QUERY
 from haystack.exceptions import NotHandled
 from haystack.inputs import AutoQuery, Raw
 from haystack.utils import log as logging
-
+from mongoengine.queryset.queryset import QuerySet as mongoengine_queryset
 
 class SearchQuerySet(object):
     """
@@ -174,6 +174,8 @@ class SearchQuerySet(object):
             if self._load_all:
                 # We have to deal with integer keys being cast from strings
                 model_objects = loaded_objects.get(result.model, {})
+
+
                 if result.pk not in model_objects:
                     try:
                         result.pk = int(result.pk)
@@ -189,7 +191,8 @@ class SearchQuerySet(object):
                     # avoid an unfilled None at the end of the result cache
                     self._result_cache.pop()
                     continue
-
+            if self._ignored_result_count:
+                self.log.warning("ignored_result_count: %d" % self._ignored_result_count)
             to_cache.append(result)
 
         return to_cache
@@ -199,7 +202,11 @@ class SearchQuerySet(object):
             ui = connections[self.query._using].get_unified_index()
             index = ui.get_index(model)
             objects = index.read_queryset(using=self.query._using)
-            return objects.in_bulk(pks)
+            if isinstance(objects, mongoengine_queryset):
+                objects = objects.filter(id__in=pks)
+                return {str(obj.id):obj for obj in objects}
+            else:
+                return objects.in_bulk(pks)
         except NotHandled:
             self.log.warning("Model '%s' not handled by the routers.", model)
             # Revert to old behaviour

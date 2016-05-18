@@ -106,8 +106,11 @@ class ZooKeeperCustomCollection(ZooKeeper):
                 self.LOG.warning("No collections available: no collections defined?")
             else:
                 for collection in children:
-                    data = self.zk.get('/'.join([ZooKeeperCustomCollection.COLLECTIONS, collection, ZooKeeperCustomCollection.STATE]))
-                    self.collections[collection] = json.loads(data[0].decode('utf-8'))[collection]
+                    try:
+                        data = self.zk.get('/'.join([ZooKeeperCustomCollection.COLLECTIONS, collection, ZooKeeperCustomCollection.STATE]))
+                        self.collections[collection] = json.loads(data[0].decode('utf-8'))[collection]
+                    except:
+                        self.LOG.exception("Path: %s get failed" % '/'.join([ZooKeeperCustomCollection.COLLECTIONS, collection, ZooKeeperCustomCollection.STATE]))
                 self.LOG.info('Updated collections: %s', self.collections)
 
         @self.zk.ChildrenWatch(ZooKeeper.LIVE_NODES_ZKNODE)
