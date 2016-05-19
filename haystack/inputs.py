@@ -152,3 +152,13 @@ class AltParser(BaseInput):
             return ''
 
         return query_obj.build_alt_parser_query(self.parser_name, self.query_string, **self.kwargs)
+
+class Substring(Clean):
+    """
+    An input type for sanitizing user/untrusted input and search for a substring.
+    """
+    input_type_name = 'Substring'
+
+    def prepare(self, query_obj):
+        query_string = super(Substring, self).prepare(query_obj)
+        return "*" + query_string + "*"
