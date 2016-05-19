@@ -346,11 +346,13 @@ class DateTimeField(SearchField):
                 data = match.groupdict()
                 obj = datetime_safe.datetime(int(data['year']), int(data['month']), int(data['day']), int(data['hour']), int(data['minute']), int(data['second']))
                 if obj.tzname() == 'UTC':
-                    obj = obj.replace(tzinfo=None)
+                    obj = obj.replace(tzinfo=None) # workaround for pysolr. It assume that datetime obj don't have tz value
                 return obj
             else:
                 raise SearchFieldError("Datetime provided to '%s' field doesn't appear to be a valid datetime string: '%s'" % (self.instance_name, value))
 
+        if value.tzname() == 'UTC':
+            value = value.replace(tzinfo=None) # workaround for pysolr. It assume that datetime obj don't have tz value
         return value
 
 
