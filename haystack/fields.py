@@ -340,11 +340,14 @@ class DateTimeField(SearchField):
             return None
 
         if isinstance(value, six.string_types):
-            match = DATETIME_REGEX.search(value)
+            match = DATETIME_REGEX.search(value) # TODO: support timezone. Make sure to convert properly.
 
             if match:
                 data = match.groupdict()
-                return datetime_safe.datetime(int(data['year']), int(data['month']), int(data['day']), int(data['hour']), int(data['minute']), int(data['second']))
+                obj = datetime_safe.datetime(int(data['year']), int(data['month']), int(data['day']), int(data['hour']), int(data['minute']), int(data['second']))
+                if obj.tzname() == 'UTC':
+                    obj = obj.replace(tzinfo=None)
+                return obj
             else:
                 raise SearchFieldError("Datetime provided to '%s' field doesn't appear to be a valid datetime string: '%s'" % (self.instance_name, value))
 
