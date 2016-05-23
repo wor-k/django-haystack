@@ -197,7 +197,7 @@ class WildcardAutoQuery(AutoQuery):
                 continue
             if token in exacts:
                 query_bits.append(AltParser(self.parser_name,
-                                            token + "*").prepare(query_obj))
+                                            "\"" + token + "*\"").prepare(query_obj))
             elif token.startswith('-') and len(token) > 1:
                 # This might break Xapian. Check on this.
                 query_bits.append(Not(token[1:]).prepare(query_obj))
