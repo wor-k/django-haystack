@@ -153,6 +153,7 @@ class AltParser(BaseInput):
 
         return query_obj.build_alt_parser_query(self.parser_name, self.query_string, **self.kwargs)
 
+
 class Substring(Clean):
     """
     An input type for sanitizing user/untrusted input and search for a substring.
@@ -162,3 +163,45 @@ class Substring(Clean):
     def prepare(self, query_obj):
         query_string = super(Substring, self).prepare(query_obj)
         return "*" + query_string + "*"
+
+
+class WildcardAutoQuery(AutoQuery):
+    """
+    Extension of AutoQuery that automatically add wildcard for all input token.
+    - parser_name is parser to support wildcard serach in pharse query
+
+    """
+    def __init__(self, parser_name, query_string='', **kwargs):
+        self.parser_name = parser_name
+        self.query_string = query_string
+        self.kwargs = kwargs
+
+    def prepare(self, query_obj):
+        query_string = super(AutoQuery, self).prepare(query_obj)
+        exacts = self.exact_match_re.findall(query_string)
+        tokens = []
+        query_bits = []
+
+        for rough_token in self.exact_match_re.split(query_string):
+            if not rough_token:
+                continue
+            elif not rough_token in exacts:
+                # We have something that's not an exact match but may have more
+                # than on word in it.
+                tokens.extend(rough_token.split(' '))
+            else:
+                tokens.append(rough_token)
+
+        for token in tokens:
+            if not token:
+                continue
+            if token in exacts:
+                query_bits.append(AltParser(self.parser_name,
+                                            token + "*").prepare(query_obj))
+            elif token.startswith('-') and len(token) > 1:
+                # This might break Xapian. Check on this.
+                query_bits.append(Not(token[1:]).prepare(query_obj))
+            else:
+                query_bits.append("*" + Clean(token).prepare(query_obj) + "*")
+
+        return u' '.join(query_bits)
