@@ -207,8 +207,17 @@ class WildcardAutoQuery(AutoQuery):
             if not token:
                 continue
             if token in exacts:
-                query_bits.append(AltParser(self.parser_name,
-                                            "\"" + token + "*\"").prepare(query_obj))
+                if token[-1:] == ' ': # user want end of word. No more *
+                    query_bits.append(Exact(token, clean=True).prepare(query_obj))
+                elif token.strip().find(' ') == -1: # complexphrase parser cannot handle query that have no space in between
+                    query_bits.append(Clean(token).prepare(query_obj) + "*")
+                else:
+                    token = token.strip()
+                    qstr = AltParser(self.parser_name, "\"" + token + "*\"", **self.kwargs).prepare(query_obj)
+                    # remove last escape of '*' which is '\*'
+                    lastWildcardEscp = qstr.rfind("\\*")
+                    qstr = qstr[:lastWildcardEscp] + qstr[(lastWildcardEscp+1):]
+                    query_bits.append(qstr)
             elif token.startswith('-') and len(token) > 1:
                 # This might break Xapian. Check on this.
                 query_bits.append(WildcardNot(token[1:]).prepare(query_obj))
