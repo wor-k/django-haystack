@@ -165,6 +165,17 @@ class Substring(Clean):
         return "*" + query_string + "*"
 
 
+class WildcardNot(Not):
+    """
+    Extend from Not class by add wildcard to the query.
+    """
+
+    def prepare(self, query_obj):
+        query_string = super(Not, self).prepare(query_obj) # skip prepare of Not
+        query_string = "*" + query_string + "*"
+        return query_obj.build_not_query(query_string)
+
+
 class WildcardAutoQuery(AutoQuery):
     """
     Extension of AutoQuery that automatically add wildcard for all input token.
@@ -177,7 +188,7 @@ class WildcardAutoQuery(AutoQuery):
         self.kwargs = kwargs
 
     def prepare(self, query_obj):
-        query_string = super(AutoQuery, self).prepare(query_obj)
+        query_string = super(AutoQuery, self).prepare(query_obj) # skip prepare of AutoQuery
         exacts = self.exact_match_re.findall(query_string)
         tokens = []
         query_bits = []
@@ -200,7 +211,7 @@ class WildcardAutoQuery(AutoQuery):
                                             "\"" + token + "*\"").prepare(query_obj))
             elif token.startswith('-') and len(token) > 1:
                 # This might break Xapian. Check on this.
-                query_bits.append(Not(token[1:]).prepare(query_obj))
+                query_bits.append(WildcardNot(token[1:]).prepare(query_obj))
             else:
                 query_bits.append("*" + Clean(token).prepare(query_obj) + "*")
 
